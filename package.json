@@ -1,0 +1,10 @@
+{
+  "name": "pi-codex-style-tools",
+  "version": "0.1.0",
+  "description": "Codex-style inline rendering for Pi's built-in tools",
+  "type": "module",
+  "keywords": ["pi-package"],
+  "pi": {
+    "extensions": ["./index.ts"]
+  }
+}
