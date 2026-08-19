@@ -6,5 +6,8 @@
   "keywords": ["pi-package"],
   "pi": {
     "extensions": ["./index.ts"]
+  },
+  "scripts": {
+    "bench": "pi --no-extensions --no-session --offline --print --extension ./bench/renderer-bench.ts benchmark"
   }
 }

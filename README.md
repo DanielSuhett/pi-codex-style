@@ -25,3 +25,18 @@ highlight with a 10-line preview and expansion hint. Short diffs up to 20
 lines are shown inline; longer diffs remain available through expansion. Bash
 output follows the tail (up to 10 lines), omits empty results, and highlights
 Git insertions in green and deletions in red.
+
+## Performance
+
+Renderer output is cached by tool result and theme, syntax highlighting is
+limited to the visible read preview, and expanded output is capped at 200 lines
+with a hint for omitted content. This keeps repeated TUI redraws cheap and
+prevents large tool results from blocking Pi's single event loop.
+
+Run the Pi-hosted benchmark:
+
+```bash
+npm run bench
+```
+
+It reports cold/steady render time for all overridden tools and event-loop lag.
