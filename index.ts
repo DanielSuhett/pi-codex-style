@@ -13,6 +13,7 @@ import {
 import { Text } from "@earendil-works/pi-tui";
 import { homedir } from "node:os";
 import { relative } from "node:path";
+import { compactSearchResult } from "./search-output.ts";
 
 const PREVIEW_LINES = 5;
 const COMMAND_LINES = 2;
@@ -732,6 +733,20 @@ function override(pi: ExtensionAPI, name: string, create: any, renderCall: any, 
 }
 
 export default function codexStyle(pi: ExtensionAPI) {
+  pi.on("tool_result", (event) => {
+    if (event.isError) return;
+
+    const content = compactSearchResult(event.toolName, event.content);
+    if (!content) return;
+
+    return {
+      content,
+      details: event.details,
+      isError: event.isError,
+      usage: event.usage,
+    };
+  });
+
   pi.on("turn_start", () => {
     lastGroup = undefined;
   });

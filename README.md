@@ -5,10 +5,10 @@
 [![CI](https://github.com/DanielSuhett/pi-codex-style/actions/workflows/ci.yml/badge.svg)](https://github.com/DanielSuhett/pi-codex-style/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-`pi-codex-style-tools` is a Pi package that keeps the built-in tools unchanged
-while rendering them with a Codex-like presentation: inline bullets,
-`Running`/`Ran` labels, shell highlighting, `│` and `└` gutters, compact output
-previews, and expandable details.
+`pi-codex-style-tools` is a Pi package that keeps tool execution unchanged
+while rendering it with a Codex-like presentation: inline bullets, `Running`/`Ran`
+labels, shell highlighting, `│` and `└` gutters, compact output previews, and
+expandable details. Search results from extensions are normalized to source URLs.
 
 ## Installation
 
@@ -36,7 +36,8 @@ Restart Pi or run `/reload` after installing the package.
 
 The extension overrides only the visual renderer for `bash`, `read`, `grep`,
 `find`, `ls`, `edit`, and `write`. Tool execution remains delegated to Pi's
-original built-in implementations.
+original built-in implementations. Search-like tool results from extensions are
+compactly rewritten to source links while preserving their details.
 
 - Consecutive file operations are grouped into one row.
 - Read and grep previews stay inline.
@@ -44,6 +45,7 @@ original built-in implementations.
 - Short diffs up to 20 lines are shown inline; longer diffs remain expandable.
 - Bash output follows the tail, up to 10 lines, and highlights Git statistics.
 - Empty successful output stays hidden to keep the transcript compact.
+- Search results from Firecrawl, Tavily, Brave, SerpAPI, and similar tools show only source URLs.
 
 ## Performance
 

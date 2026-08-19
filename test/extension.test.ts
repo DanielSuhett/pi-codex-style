@@ -3,6 +3,7 @@ import test from "node:test";
 import codexStyle from "../index.ts";
 
 type Handler = (event: any, ctx?: any) => unknown;
+type ToolResultPatch = { content?: unknown; details?: unknown };
 
 type FakePi = {
   handlers: Map<string, Handler[]>;
@@ -58,6 +59,105 @@ test("registers the built-in tool renderers as a Pi package extension", () => {
   }
   assert.ok(pi.handlers.has("turn_start"));
   assert.ok(pi.handlers.has("tool_execution_start"));
+  assert.ok(pi.handlers.has("tool_result"));
+});
+
+test("compacts search results from different tools to source links", () => {
+  const pi = createPi();
+  codexStyle(pi as any);
+  const compact = pi.handlers.get("tool_result")?.[0];
+  assert.ok(compact);
+
+  const cases = [
+    [
+      "search",
+      JSON.stringify({
+        web: [{
+          url: "https://example.com/web",
+          title: "Web result",
+          description: "See https://example.com/inside only in the snippet",
+        }],
+      }),
+      "https://example.com/web",
+    ],
+    [
+      "tavily_search",
+      JSON.stringify({ results: [{ url: "https://example.com/tavily", title: "Tavily" }] }),
+      "https://example.com/tavily",
+    ],
+    [
+      "brave_web_search",
+      JSON.stringify({ organic_results: [{ link: "https://example.com/brave" }] }),
+      "https://example.com/brave",
+    ],
+    [
+      "search",
+      "[Readable result](https://example.com/markdown)",
+      "https://example.com/markdown",
+    ],
+  ] as const;
+
+  for (const [toolName, text, expected] of cases) {
+    const details = { original: true };
+    const result = compact({
+      toolName,
+      toolCallId: `${toolName}-test`,
+      input: {},
+      content: [{ type: "text", text }],
+      details,
+      isError: false,
+    }) as ToolResultPatch | undefined;
+
+    assert.deepEqual(result?.content, [{ type: "text", text: expected }]);
+    assert.equal(result?.details, details);
+  }
+
+  const empty = compact({
+    toolName: "firecrawl_search",
+    toolCallId: "empty-search",
+    input: {},
+    content: [{ type: "text", text: '{"web":[]}' }],
+    details: {},
+    isError: false,
+  }) as ToolResultPatch | undefined;
+  assert.deepEqual(empty?.content, [{ type: "text", text: "No results" }]);
+
+  assert.equal(
+    compact({
+      toolName: "search",
+      toolCallId: "failed-search",
+      input: {},
+      content: [{ type: "text", text: "Error: https://example.com" }],
+      details: {},
+      isError: true,
+    }),
+    undefined,
+  );
+});
+
+test("does not rewrite unrelated URL-bearing tool output", () => {
+  const pi = createPi();
+  codexStyle(pi as any);
+  const compact = pi.handlers.get("tool_result")?.[0];
+  assert.ok(compact);
+
+  for (const text of [
+    '{"url":"https://example.com"}',
+    '[{"url":"https://example.com"}]',
+    '{"data":{"url":"https://example.com"}}',
+  ]) {
+    assert.equal(
+      compact({
+        toolName: "browser",
+        toolCallId: "browser-test",
+        input: {},
+        content: [{ type: "text", text }],
+        details: {},
+        isError: false,
+      }),
+      undefined,
+    );
+  }
 });
 
 test("renders Codex-style bash and read output", () => {
