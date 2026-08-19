@@ -190,8 +190,7 @@ test("renders Codex-style bash and read output", () => {
     theme,
     readContext,
   );
-  assert.match(renderText(readResult), /src\/example\.ts/);
-  assert.match(renderText(readResult), /answer/);
+  assert.equal(renderText(readResult), "");
 });
 
 test("renders the remaining built-in tool result shapes", () => {
@@ -224,10 +223,12 @@ test("renders the remaining built-in tool result shapes", () => {
   }
 
   const edit = pi.tools.get("edit");
-  const editArgs = { path: "src/example.ts" };
+  const editArgs = { file_path: "src/example.ts" };
   const editContext = { toolCallId: "edit-test", args: editArgs, state: {} };
   begin(pi, "edit", editContext.toolCallId, editArgs);
-  assert.match(renderText(edit.renderCall(editArgs, theme, editContext)), /Editing/);
+  const editCall = edit.renderCall(editArgs, theme, editContext);
+  assert.match(renderText(editCall), /Editing/);
+  assert.match(renderText(editCall), /src\/example\.ts/);
   const editResult = edit.renderResult(
     {
       content: [{ type: "text", text: "ok" }],
@@ -237,6 +238,7 @@ test("renders the remaining built-in tool result shapes", () => {
     theme,
     editContext,
   );
+  assert.match(renderText(editCall), /Edited src\/example\.ts \+1 \/ -1/);
   assert.match(renderText(editResult), /\+new/);
 
   const write = pi.tools.get("write");

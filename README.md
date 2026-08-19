@@ -40,8 +40,7 @@ original built-in implementations. Search-like tool results from extensions are
 compactly rewritten to source links while preserving their details.
 
 - Consecutive file operations are grouped into one row.
-- Read and grep previews stay inline.
-- Read content gets a bordered, path-aware syntax highlight with a 10-line preview.
+- Grep previews stay inline.
 - Short diffs up to 20 lines are shown inline; longer diffs remain expandable.
 - Bash output follows the tail, up to 10 lines, and highlights Git statistics.
 - Empty successful output stays hidden to keep the transcript compact.

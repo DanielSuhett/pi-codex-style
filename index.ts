@@ -7,7 +7,6 @@ import {
   createLsTool,
   createReadTool,
   createWriteTool,
-  getLanguageFromPath,
   highlightCode,
 } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
@@ -18,10 +17,8 @@ import { compactSearchResult } from "./search-output.ts";
 const PREVIEW_LINES = 5;
 const COMMAND_LINES = 2;
 const SHORT_DIFF_LINES = 20;
-const READ_PREVIEW_LINES = 10;
 const BASH_TAIL_LINES = 10;
 const MAX_RENDER_LINES = 200;
-const MAX_READ_HIGHLIGHT_LINES = READ_PREVIEW_LINES;
 const MAX_GROUPS = 256;
 const TRANSCRIPT_HINT = "ctrl+o to expand";
 const HOME = homedir();
@@ -59,7 +56,6 @@ type GroupItem = {
   result?: any;
   output?: string;
   displayOutput?: string;
-  outputLines?: string[];
   diff?: string;
   diffLines?: string[];
   additions?: number;
@@ -79,6 +75,8 @@ type ToolGroup = {
   version: number;
   label?: string;
   pathLabel?: string;
+  callComponent?: Text;
+  callState?: RenderState;
   output?: { version: number; text: string };
   diffPreview?: { version: number; maxLines: number; totalLines: number; lines: string[] };
   render?: RenderCache;
@@ -108,13 +106,19 @@ function rememberGroup(id: string, group: ToolGroup): void {
 function groupItem(group: ToolGroup, id: string, args: any): GroupItem {
   let item = group.items.get(id);
   if (!item) {
-    item = { id, args, path: shortPath(args?.path), done: false };
+    item = { id, args, path: shortPath(pathArg(args)), done: false };
     group.items.set(id, item);
     group.firstId ??= id;
     group.label = undefined;
     group.pathLabel = undefined;
   } else if (args !== undefined) {
     item.args = args;
+    const path = shortPath(pathArg(args));
+    if (item.path !== path) {
+      item.path = path;
+      group.label = undefined;
+      group.pathLabel = undefined;
+    }
   }
   return item;
 }
@@ -160,6 +164,10 @@ function resultText(result: any): string {
   return item?.text ?? "";
 }
 
+function pathArg(args: any): unknown {
+  return args?.path ?? args?.file_path;
+}
+
 function shortPath(value: unknown): string {
   const path = String(value || ".");
   if (path === HOME) return "~";
@@ -189,22 +197,12 @@ function updateGroupItem(group: ToolGroup, item: GroupItem, result: any, error: 
   if (item.output !== output || item.displayOutput !== displayOutput || item.error !== error || item.done !== done) {
     item.output = output;
     item.displayOutput = displayOutput;
-    item.outputLines = undefined;
     item.error = error;
     item.done = done;
     invalidateGroup(group);
   }
   item.result = result;
   return output;
-}
-
-function itemLines(item: GroupItem): string[] {
-  if (item.outputLines === undefined) {
-    const lines = (item.displayOutput ?? "").split("\n");
-    while (lines.length > 0 && lines.at(-1) === "") lines.pop();
-    item.outputLines = lines;
-  }
-  return item.outputLines;
 }
 
 function cachedGroupText(
@@ -327,62 +325,6 @@ function textOutputDisplay(output: string, theme: any, expanded: boolean): strin
       const prefix = index === 0 ? "  └ " : "    ";
       return theme.fg("dim", `${prefix}${line}`);
     })
-    .join("\n");
-}
-
-function readPreviewDisplay(group: ToolGroup, theme: any, expanded: boolean): string {
-  return groupItems(group)
-    .map((item) => {
-      const output = item.displayOutput ?? "";
-      if (!output) return "";
-
-      const path = String(item.args?.path || "");
-      let language = "";
-      try {
-        language = getLanguageFromPath(path) || "";
-      } catch {
-        // Unknown extensions stay as plain text.
-      }
-
-      const lines = previewLineArray(itemLines(item), expanded, READ_PREVIEW_LINES);
-      const codeInput: string[] = [];
-      for (const line of lines) {
-        if (!line.startsWith("… (") && codeInput.length < MAX_READ_HIGHLIGHT_LINES) {
-          codeInput.push(line);
-        }
-      }
-
-      let highlightedLines = codeInput;
-      if (codeInput.length > 0) {
-        try {
-          highlightedLines = toLines(
-            highlightCode(codeInput.join("\n"), language || "text"),
-          );
-        } catch {
-          // Keep raw text if the syntax highlighter has no grammar for the path.
-        }
-      }
-
-      let codeIndex = 0;
-      const body = lines.map((line) => {
-        if (line.startsWith("… (")) {
-          return theme.fg("dim", `    │ ${line}`);
-        }
-        const code = codeIndex < highlightedLines.length
-          ? highlightedLines[codeIndex]
-          : line;
-        codeIndex++;
-        return `${theme.fg("dim", "    │ ")}${code}`;
-      });
-
-      const label = language ? ` (${language})` : "";
-      return [
-        theme.fg("dim", `    ┌─ ${shortPath(path)}${label}`),
-        ...body,
-        theme.fg("dim", "    └─"),
-      ].join("\n");
-    })
-    .filter(Boolean)
     .join("\n");
 }
 
@@ -570,12 +512,7 @@ function explorationResult(name: string, result: any, options: any, theme: any, 
     return textComponent(text, context);
   }
   if (!output) return textComponent("", context);
-  if (name === "read") {
-    const text = cachedGroupText(group, "read", options.expanded, theme, () =>
-      readPreviewDisplay(group, theme, options.expanded),
-    );
-    return textComponent(text, context);
-  }
+  if (name === "read") return textComponent("", context);
   if (name === "grep") {
     const text = cachedGroupText(group, "grep", options.expanded, theme, () =>
       textOutputDisplay(output, theme, options.expanded),
@@ -593,11 +530,7 @@ function groupPathLabel(group: ToolGroup): string {
   return group.pathLabel;
 }
 
-function editCall(args: any, theme: any, context: any): Text {
-  const { group, first } = toolGroup("edit", args, context);
-  if (!first) return textComponent("", context);
-
-  const state = stateOf(context);
+function editHeader(group: ToolGroup, theme: any, state: RenderState): string {
   let text = `${marker(theme, state)} ${theme.bold(verb(state, "Editing", "Edited"))} ${theme.fg("accent", groupPathLabel(group))}`;
   let additions = 0;
   let removals = 0;
@@ -608,7 +541,18 @@ function editCall(args: any, theme: any, context: any): Text {
   if (state.additions !== undefined || additions || removals) {
     text += ` ${theme.fg("toolDiffAdded", `+${additions}`)}${theme.fg("dim", " /")} ${theme.fg("toolDiffRemoved", `-${removals}`)}`;
   }
-  return textComponent(text, context);
+  return text;
+}
+
+function editCall(args: any, theme: any, context: any): Text {
+  const { group, first } = toolGroup("edit", args, context);
+  if (!first) return textComponent("", context);
+
+  const state = stateOf(context);
+  const component = textComponent(editHeader(group, theme, state), context);
+  group.callComponent = component;
+  group.callState = state;
+  return component;
 }
 
 function editResult(result: any, options: any, theme: any, context: any): Text {
@@ -635,8 +579,6 @@ function editResult(result: any, options: any, theme: any, context: any): Text {
     }
     invalidateGroup(group);
   }
-  if (!first) return textComponent("", context);
-
   const state = stateOf(context);
   state.done = groupComplete(group);
   state.error = false;
@@ -647,6 +589,15 @@ function editResult(result: any, options: any, theme: any, context: any): Text {
     state.additions += entry.additions || 0;
     state.removals += entry.removals || 0;
   }
+
+  const headerState = group.callState ?? state;
+  headerState.done = state.done;
+  headerState.error = state.error;
+  headerState.additions = state.additions;
+  headerState.removals = state.removals;
+  group.callComponent?.setText(editHeader(group, theme, headerState));
+
+  if (!first) return textComponent("", context);
 
   if (options.isPartial || !groupComplete(group)) {
     return textComponent(theme.fg("dim", "  └ Running…"), context);
