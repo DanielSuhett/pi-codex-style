@@ -3,11 +3,54 @@
   "version": "0.1.0",
   "description": "Codex-style inline rendering for Pi's built-in tools",
   "type": "module",
-  "keywords": ["pi-package"],
-  "pi": {
-    "extensions": ["./index.ts"]
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "codex",
+    "renderer",
+    "tui"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DanielSuhett/pi-codex-style.git"
   },
+  "bugs": {
+    "url": "https://github.com/DanielSuhett/pi-codex-style/issues"
+  },
+  "homepage": "https://github.com/DanielSuhett/pi-codex-style#readme",
+  "engines": {
+    "node": ">=22.6.0"
+  },
+  "files": [
+    "index.ts",
+    "bench",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "bench": "pi --no-extensions --no-session --offline --print --extension ./bench/renderer-bench.ts benchmark"
+    "bench": "pi --no-extensions --no-session --offline --print --extension ./bench/renderer-bench.ts benchmark",
+    "test": "node --experimental-strip-types --test test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "pack:check": "npm pack --dry-run --access public",
+    "verify": "npm test && npm run typecheck && npm run pack:check"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "0.84.2",
+    "@earendil-works/pi-tui": "0.84.2",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.3"
+  },
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run verify
+      - run: npm run bench
+
+      - name: Smoke-test Pi installation
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global --ignore-scripts @earendil-works/pi-coding-agent@0.84.2
+
+          smoke_dir="$(mktemp -d)"
+          smoke_home="$smoke_dir/home"
+          mkdir -p "$smoke_home"
+          npm pack --pack-destination "$smoke_dir" >/dev/null
+          package_dir="$smoke_dir/package"
+          mkdir -p "$package_dir"
+          tar -xzf "$(find "$smoke_dir" -maxdepth 1 -name '*.tgz' -print -quit)" \
+            -C "$package_dir" --strip-components=1
+
+          HOME="$smoke_home" pi install "$package_dir"
+          HOME="$smoke_home" pi --offline --mode rpc --no-session \
+            >"$smoke_dir/output.jsonl" 2>"$smoke_dir/error.log" <<'EOF'
+          {"type":"get_state"}
+          EOF
+          grep -q '"command":"get_state"' "$smoke_dir/output.jsonl"
+          test ! -s "$smoke_dir/error.log"

@@ -228,7 +228,7 @@ function toLines(value: unknown): string[] {
 
 function commandLine(command: string, theme: any): string {
   try {
-    return toLines(highlightCode(command, "bash", theme)).join("\n");
+    return toLines(highlightCode(command, "bash")).join("\n");
   } catch {
     return theme.fg("accent", command);
   }
@@ -355,7 +355,7 @@ function readPreviewDisplay(group: ToolGroup, theme: any, expanded: boolean): st
       if (codeInput.length > 0) {
         try {
           highlightedLines = toLines(
-            highlightCode(codeInput.join("\n"), language || "text", theme),
+            highlightCode(codeInput.join("\n"), language || "text"),
           );
         } catch {
           // Keep raw text if the syntax highlighter has no grammar for the path.
@@ -624,10 +624,11 @@ function editResult(result: any, options: any, theme: any, context: any): Text {
   const diff = typeof result?.details?.diff === "string" ? result.details.diff : "";
   if (item.diff !== diff) {
     item.diff = diff;
-    item.diffLines = diff ? diff.split("\n") : [];
+    const diffLines = diff ? diff.split("\n") : [];
+    item.diffLines = diffLines;
     item.additions = 0;
     item.removals = 0;
-    for (const line of item.diffLines) {
+    for (const line of diffLines) {
       if (line.startsWith("+") && !line.startsWith("+++")) item.additions++;
       if (line.startsWith("-") && !line.startsWith("---")) item.removals++;
     }

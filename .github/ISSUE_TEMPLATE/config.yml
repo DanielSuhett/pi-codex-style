@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Discussions
+    url: https://github.com/DanielSuhett/pi-codex-style/discussions
+    about: Use discussions for questions and ideas that are not actionable issues.

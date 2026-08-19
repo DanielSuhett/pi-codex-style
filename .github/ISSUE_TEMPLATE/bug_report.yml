@@ -1,0 +1,29 @@
+name: Bug report
+description: Report unexpected rendering behavior
+title: "bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for helping improve pi-codex-style-tools.
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Include the expected and observed rendering.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: How can we reproduce it?
+      description: List the smallest steps and the relevant tool call if possible.
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      placeholder: Pi, Node.js, package version, and operating system
+    validations:
+      required: true

@@ -1,0 +1,17 @@
+node_modules/
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Logs and coverage
+*.log
+coverage/
+.nyc_output/
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
